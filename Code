@@ -1,0 +1,70 @@
+import keras
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+import numpy as np
+import cv2
+import os
+
+def load_data(data_dir):
+    # Get a list of all the image files in the data directory
+    images = [f for f in os.listdir(data_dir) if f.endswith('.jpg') or f.endswith('.png')]
+    
+    # Load the images and labels into memory
+    x = []
+    y = []
+    for image_file in images:
+        # Load the image
+        image = cv2.imread(os.path.join(data_dir, image_file))
+        
+        # Preprocess the image
+        image = cv2.resize(image, (28, 28))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = image.astype('float32') / 255.
+        
+        # Add the image to the input data array
+        x.append(image)
+        
+        # Get the label from the filename (assuming the filename is in the format '<label>_<image_id>.jpg')
+        label = int(image_file.split('_')[0])
+        y.append(label)
+    
+    # Convert the input data and labels to numpy arrays
+    x = np.array(x)
+    x = np.expand_dims(x, axis=-1)
+    y = np.array(y)
+    
+    return x, y
+
+# Load the training data
+x_train, y_train = load_data('data/train')
+
+# Load the test data
+x_test, y_test = load_data('data/test')
+
+# Initialize the model
+model = Sequential()
+
+# Add a 2D convolution layer with 32 filters and a kernel size of 3x3
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)))
+
+# Add a 2D max pooling layer with a pool size of 2x2
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+# Flatten the output from the previous layer
+model.add(Flatten())
+
+# Add a dense layer with 128 units and a 'relu' activation
+model.add(Dense(128, activation='relu'))
+
+# Add a final dense layer with 1 unit and a 'sigmoid' activation for binary classification
+model.add(Dense(1, activation='sigmoid'))
+
+# Compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Train the model on the training data
+model.fit(x_train, y_train, epochs=10, batch_size=32, validation_data=(x_test, y_test))
+
+# Use the trained model to make predictions on new data
+predictions = model.predict(x_test)
+
